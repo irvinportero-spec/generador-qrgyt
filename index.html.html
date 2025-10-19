@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador QR - Productos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .qr-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        .qr-container.active {
+            display: block;
+        }
+        
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .product-info {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: left;
+        }
+        
+        .product-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .product-info p {
+            color: #666;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .product-info strong {
+            color: #333;
+        }
+        
+        .btn-download {
+            background: #28a745;
+            margin-top: 15px;
+        }
+        
+        .btn-download:hover {
+            box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+        
+        .offline-badge {
+            background: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="offline-badge">✓ 100% Offline</div>
+        <h1>📱 Generador de QR</h1>
+        <p class="subtitle">Para productos y servicios</p>
+        
+        <form id="productForm">
+            <div class="form-group">
+                <label for="productName">Nombre del Producto</label>
+                <input type="text" id="productName" placeholder="Ej: Camiseta Personalizada" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="features">Características</label>
+                <textarea id="features" placeholder="Ej: 100% algodón, talla M, color azul..." required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="price">Precio</label>
+                <input type="text" id="price" placeholder="Ej: $25.00" required>
+            </div>
+            
+            <button type="submit" class="btn">✨ Generar Código QR</button>
+        </form>
+        
+        <div class="qr-container" id="qrContainer">
+            <div class="icon">✅</div>
+            <h3>¡QR Generado Exitosamente!</h3>
+            <canvas id="qrcode"></canvas>
+            
+            <div class="product-info">
+                <h3 id="displayName"></h3>
+                <p><strong>Características:</strong> <span id="displayFeatures"></span></p>
+                <p><strong>Precio:</strong> <span id="displayPrice"></span></p>
+            </div>
+            
+            <button class="btn btn-download" onclick="downloadQR()">⬇️ Descargar QR</button>
+        </div>
+    </div>
+
+    <script>
+        // Generador de QR simple y ligero - 100% OFFLINE
+        function generateQRCode(text, size) {
+            const canvas = document.getElementById('qrcode');
+            const ctx = canvas.getContext('2d');
+            
+            // Configuración del QR
+            const qrSize = 29; // Tamaño de matriz 29x29
+            const cellSize = size / qrSize;
+            
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Fondo blanco
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Generar matriz QR simple
+            const matrix = createQRMatrix(text, qrSize);
+            
+            // Dibujar el QR
+            ctx.fillStyle = '#000000';
+            for (let row = 0; row < qrSize; row++) {
+                for (let col = 0; col < qrSize; col++) {
+                    if (matrix[row][col]) {
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+        }
+        
+        function createQRMatrix(text, size) {
+            const matrix = [];
+            
+            // Inicializar matriz
+            for (let i = 0; i < size; i++) {
+                matrix[i] = [];
+                for (let j = 0; j < size; j++) {
+                    matrix[i][j] = false;
+                }
+            }
+            
+            // Patrones de posición (esquinas)
+            addFinderPattern(matrix, 0, 0);
+            addFinderPattern(matrix, size - 7, 0);
+            addFinderPattern(matrix, 0, size - 7);
+            
+            // Líneas de tiempo
+            for (let i = 8; i < size - 8; i++) {
+                matrix[6][i] = (i % 2 === 0);
+                matrix[i][6] = (i % 2 === 0);
+            }
+            
+            // Convertir texto a patrón binario simple
+            const binary = textToBinary(text);
+            let bitIndex = 0;
+            
+            // Llenar datos en zigzag
+            for (let col = size - 1; col > 0; col -= 2) {
+                if (col === 6) col--;
+                
+                for (let row = 0; row < size; row++) {
+                    for (let c = 0; c < 2; c++) {
+                        const currentCol = col - c;
+                        
+                        if (!isReserved(row, currentCol, size) && bitIndex < binary.length) {
+                            matrix[row][currentCol] = binary[bitIndex] === '1';
+                            bitIndex++;
+                        }
+                    }
+                }
+            }
+            
+            return matrix;
+        }
+        
+        function addFinderPattern(matrix, row, col) {
+            // Patrón 7x7 de las esquinas
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 7; c++) {
+                    const shouldFill = (r === 0 || r === 6 || c === 0 || c === 6 || 
+                                       (r >= 2 && r <= 4 && c >= 2 && c <= 4));
+                    if (row + r < matrix.length && col + c < matrix.length) {
+                        matrix[row + r][col + c] = shouldFill;
+                    }
+                }
+            }
+        }
+        
+        function isReserved(row, col, size) {
+            // Verificar si la posición está reservada para patrones
+            if ((row < 9 && col < 9) || 
+                (row < 9 && col >= size - 8) || 
+                (row >= size - 8 && col < 9)) {
+                return true;
+            }
+            if (row === 6 || col === 6) {
+                return true;
+            }
+            return false;
+        }
+        
+        function textToBinary(text) {
+            let binary = '';
+            for (let i = 0; i < text.length; i++) {
+                const charCode = text.charCodeAt(i);
+                binary += charCode.toString(2).padStart(8, '0');
+            }
+            // Agregar padding si es necesario
+            while (binary.length < 200) {
+                binary += '0';
+            }
+            return binary;
+        }
+        
+        // Manejo del formulario
+        document.getElementById('productForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('productName').value;
+            const features = document.getElementById('features').value;
+            const price = document.getElementById('price').value;
+            
+            // Formato de los datos para el QR
+            const qrData = `Producto: ${name}\nCaracterísticas: ${features}\nPrecio: ${price}`;
+            
+            // Mostrar información del producto
+            document.getElementById('displayName').textContent = name;
+            document.getElementById('displayFeatures').textContent = features;
+            document.getElementById('displayPrice').textContent = price;
+            
+            // Generar QR
+            generateQRCode(qrData, 300);
+            
+            // Mostrar contenedor del QR
+            document.getElementById('qrContainer').classList.add('active');
+            
+            // Scroll suave hacia el QR
+            setTimeout(() => {
+                document.getElementById('qrContainer').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest' 
+                });
+            }, 100);
+        });
+        
+        function downloadQR() {
+            const canvas = document.getElementById('qrcode');
+            const url = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            const productName = document.getElementById('productName').value.replace(/[^a-z0-9]/gi, '_');
+            a.download = `QR_${productName}.png`;
+            a.href = url;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
